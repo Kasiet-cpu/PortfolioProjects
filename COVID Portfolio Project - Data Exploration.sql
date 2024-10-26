@@ -1,4 +1,356 @@
--- Создание временной таблицы для анализа процентного увеличения вакцинации
+-- РџСЂРѕСЃРјРѕС‚СЂРµС‚СЊ РІСЃРµ РґР°РЅРЅС‹Рµ Рѕ СЃРјРµСЂС‚СЏС…
+Select *
+From dbo.CovidDeaths
+Where continent is not null 
+order by 3,4;
+
+SELECT 
+	*,
+	ROUND((RollingPeopleVaccinated / NULLIF(population,0)) * 100,2) AS PercantRollingPeopleVaccinated
+FROM
+	TEMP_PercantRollingPeopleVaccinated;
+
+-- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ Р·Р°СЂР°Р¶РµРЅРЅС‹С… Рё СЃРјРµСЂС‚РЅРѕСЃС‚Рё РїРѕ РјРёСЂСѓ
+SELECT 
+	SUM(new_cases) AS total_new_cases,
+	SUM(CAST(new_deaths AS INT)) AS total_new_deaths,
+	SUM(CAST(new_deaths AS INT)) / SUM(new_cases) * 100 AS PercantageDeaths
+FROM 
+	dbo.CovidDeaths
+WHERE 
+	continent IS NOT NULL;
+
+
+-- РђРЅР°Р»РёР· РЅРѕРІС‹С… СЃР»СѓС‡Р°РµРІ Рё СЃРјРµСЂС‚РЅРѕСЃС‚Рё РѕС‚ COVID-19 РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј
+SELECT 
+	continent,  -- РќР°Р·РІР°РЅРёРµ РєРѕРЅС‚РёРЅРµРЅС‚Р°
+	date,       -- Р”Р°С‚Р° Р·Р°РїРёСЃРё РґР°РЅРЅС‹С…
+	SUM(COALESCE(CAST(new_cases AS INT), 0)) AS total_new_cases,  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃР»СѓС‡Р°РµРІ, СЃ Р·Р°РјРµРЅРѕР№ NULL РЅР° 0
+	SUM(COALESCE(CAST(new_deaths AS INT), 0)) AS total_new_deaths,  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃРјРµСЂС‚РµР№, СЃ Р·Р°РјРµРЅРѕР№ NULL РЅР° 0
+	CASE 
+		WHEN SUM(COALESCE(CAST(new_cases AS INT), 0)) = 0  -- РџСЂРѕРІРµСЂРєР°, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РґРµР»РµРЅРёСЏ РЅР° РЅРѕР»СЊ
+		THEN 0  -- Р•СЃР»Рё РѕР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃР»СѓС‡Р°РµРІ СЂР°РІРЅРѕ 0, РІРµСЂРЅСѓС‚СЊ 0
+		ELSE ROUND(SUM(COALESCE(CAST(new_deaths AS REAL), 0)) / SUM(COALESCE(CAST(new_cases AS REAL), 0)) * 100, 2)  -- Р’С‹С‡РёСЃР»РµРЅРёРµ РїСЂРѕС†РµРЅС‚Р° СЃРјРµСЂС‚РµР№, РѕРєСЂСѓРіР»РµРЅРёРµ РґРѕ 2 Р·РЅР°РєРѕРІ
+	END AS PercantageDeaths
+FROM 
+	dbo.CovidDeaths  -- РўР°Р±Р»РёС†Р° СЃ РґР°РЅРЅС‹РјРё Рѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РѕС‚ COVID
+WHERE 
+	continent IS NOT NULL  -- РСЃРєР»СЋС‡РµРЅРёРµ СЃС‚СЂРѕРє, РіРґРµ РєРѕРЅС‚РёРЅРµРЅС‚ РЅРµ СѓРєР°Р·Р°РЅ
+GROUP BY 
+	continent,  -- Р“СЂСѓРїРїРёСЂРѕРІРєР° РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ
+	date        -- Р“СЂСѓРїРїРёСЂРѕРІРєР° РїРѕ РґР°С‚Рµ
+ORDER BY
+	continent;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ
+
+--РџРѕРєР°Р·Р°РЅС‹ РєРѕРЅС‚РёРЅРµРЅС‚С‹ СЃ СЃР°РјС‹Рј РІС‹СЃРѕРєРёРј РїРѕРєР°Р·Р°С‚РµР»РµРј РїСЂРѕС†РµРЅС‚РЅРѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РЅР°СЃРµР»РµРЅРёСЏ
+SELECT 
+	continent, 
+	MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
+FROM
+	dbo.CovidDeaths
+WHERE
+	continent IS NOT NULL
+GROUP BY 
+	continent
+ORDER BY
+	TotalDeathCount DESC;
+
+-- Р’ РєР°РєРёС… СЃС‚СЂР°РЅР°С… Р±С‹Р»Р° СЃР°РјР°СЏ РІС‹СЃРѕРєР°СЏ СЃРјРµСЂС‚РЅРѕСЃС‚СЊ Р»СЋРґРµР№
+ /*РџСЂРѕР°РЅР°Р»РёР·РёСЂРѕРІР°С‚СЊ СЃС‚СЂР°РЅС‹ СЃ СЃР°РјРѕР№ РІС‹СЃРѕРєРѕР№ СЃРјРµСЂС‚РЅРѕСЃС‚СЊСЋ Рё РѕС†РµРЅРёС‚СЊ,РєР°РєРёРµ СЃС‚СЂР°РЅС‹ РїРѕСЃС‚СЂР°РґР°Р»Рё Р±РѕР»СЊС€Рµ РІСЃРµРіРѕ
+					РїРѕ СЃСЂР°РІРЅРµРЅРёСЋ СЃ РёС… РЅР°СЃРµР»РµРЅРёРµРј РІ С…РѕРґРµ РїР°РЅРґРµРјРёРё COVID-19.*/
+
+SELECT 
+    location,
+    MAX(CAST(total_deaths AS INT)) AS HighestDeaths,  
+    MAX(COALESCE(CAST(total_deaths AS FLOAT), 0) / NULLIF(COALESCE(CAST(population AS BIGINT), 0), 0) * 100) AS DeathPercentage 
+FROM 
+    dbo.CovidDeaths
+WHERE 
+	continent IS NOT NULL
+GROUP BY 
+    location
+ORDER BY
+    HighestDeaths DESC;  
+
+
+-- Р—Р°РїСЂРѕСЃ РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ СЃС‚СЂР°РЅ СЃ СЃР°РјС‹Рј РІС‹СЃРѕРєРёРј СѓСЂРѕРІРЅРµРј РёРЅС„РµРєС†РёР№ COVID-19 
+SELECT 
+    location,                             -- РќР°Р·РІР°РЅРёРµ СЃС‚СЂР°РЅС‹
+    population,                           -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅР°СЃРµР»РµРЅРёСЏ СЃС‚СЂР°РЅС‹
+    MAX(total_cases) AS MaxTotalInfected,  -- РњР°РєСЃРёРјР°Р»СЊРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЃР»СѓС‡Р°РµРІ РёРЅС„РµРєС†РёРё COVID-19 РІ СЃС‚СЂР°РЅРµ
+    (MAX(total_cases) / NULLIF(population, 0)) * 100 AS PercentPopulationInfected  -- РџСЂРѕС†РµРЅС‚ РЅР°СЃРµР»РµРЅРёСЏ, РёРЅС„РёС†РёСЂРѕРІР°РЅРЅРѕРіРѕ COVID-19
+FROM 
+    dbo.CovidDeaths
+WHERE 
+    continent IS NOT NULL
+GROUP BY 
+    location,
+    population
+ORDER BY
+    PercentPopulationInfected DESC;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ РїСЂРѕС†РµРЅС‚Сѓ РёРЅС„РёС†РёСЂРѕРІР°РЅРЅС‹С… РЅР°СЃРµР»РµРЅРёСЏ РІ РїРѕСЂСЏРґРєРµ СѓР±С‹РІР°РЅРёСЏ
+
+-- РћС‚РѕР±СЂР°Р·РёС‚СЊ РѕР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЃР»СѓС‡Р°РµРІ Р·Р°СЂР°Р¶РµРЅРёР№ COVID-19 РІ СЃСЂР°РІРЅРµРЅРёРё СЃ С‡РёСЃР»РµРЅРЅРѕСЃС‚СЊСЋ РЅР°СЃРµР»РµРЅРёСЏ
+SELECT 
+	location,
+	date,
+	total_cases,
+	population,
+	(total_cases/population) * 100 AS PopulationPercantage -- РџСЂРѕС†РµРЅС‚ РЅР°СЃРµР»РµРЅРёСЏ Р·Р°СЂР°Р¶РµРЅРЅС‹Рµ COVID-19
+FROM 
+	dbo.CovidDeaths
+WHERE 
+	LOWER(location) LIKE 'kazakh%'
+ORDER BY
+	1,2;
+
+-- Р—Р°РїСЂРѕСЃ РІС‹РїРѕР»РЅСЏРµС‚ РІС‹С‡РёСЃР»РµРЅРёРµ РїСЂРѕС†РµРЅС‚Р° СЃРјРµСЂС‚РЅРѕСЃС‚Рё РѕС‚ COVID-19 РїРѕ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЏРј, РЅР°С‡РёРЅР°СЋС‰РёРјСЃСЏ СЃ "Kazakh", Рё СЃРѕСЂС‚РёСЂСѓРµС‚ РґР°РЅРЅС‹Рµ РїРѕ Р»РѕРєР°С†РёРё Рё РґР°С‚Рµ.
+-- Р­С‚Рѕ РїРѕРєР°Р·С‹РІР°РµС‚, С‡С‚Рѕ РІРµСЂРѕСЏС‚РЅРѕСЃС‚СЊ Р»РµС‚Р°Р»СЊРЅРѕРіРѕ РёСЃС…РѕРґР° РїСЂРё Р·Р°СЂР°Р¶РµРЅРёРё COVID-19 РІ РЅР°С€РµР№ СЃС‚СЂР°РЅРµ РѕСЃС‚Р°РµС‚СЃСЏ РЅРёР·РєРѕР№.
+SELECT 
+	location, 
+	date, 
+	total_cases, 
+	total_deaths,
+	(total_deaths/total_cases) * 100 AS DeathPercantage -- РџСЂРѕС†РµРЅС‚ СЃРјРµСЂС‚Рё
+FROM 
+	dbo.CovidDeaths
+WHERE 
+	LOWER(location) LIKE 'kazakh%'
+ORDER BY
+	1,2;
+
+--РђРЅР°Р»РёР· РЅР°РєРѕРїРёС‚РµР»СЊРЅРѕР№ РІР°РєС†РёРЅР°С†РёРё РѕС‚ COVID-19 РїРѕ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЋ Рё РїСЂРѕС†РµРЅС‚Сѓ РІР°РєС†РёРЅРёСЂРѕРІР°РЅРЅС‹С…
+WITH rolling_percentage (continent, location, date, population, new_vaccinations, RollingPeopleVaccinated) AS (
+    SELECT
+        dea.continent,  -- РќР°Р·РІР°РЅРёРµ РєРѕРЅС‚РёРЅРµРЅС‚Р°
+        dea.location,   -- РњРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёРµ (СЃС‚СЂР°РЅР° РёР»Рё СЂРµРіРёРѕРЅ)
+        dea.date,       -- Р”Р°С‚Р° Р·Р°РїРёСЃРё РґР°РЅРЅС‹С…
+        dea.population, -- РќР°СЃРµР»РµРЅРёРµ СЃС‚СЂР°РЅС‹ РёР»Рё СЂРµРіРёРѕРЅР°
+        vac.new_vaccinations,  -- РќРѕРІС‹Рµ РІР°РєС†РёРЅР°С†РёРё Р·Р° РґРµРЅСЊ
+        SUM(CONVERT(REAL, vac.new_vaccinations)) OVER(
+            PARTITION BY dea.location 
+            ORDER BY dea.location, dea.date
+        ) AS RollingPeopleVaccinated  -- РќР°РєРѕРїРёС‚РµР»СЊРЅРѕРµ С‡РёСЃР»Рѕ РІР°РєС†РёРЅРёСЂРѕРІР°РЅРЅС‹С… Р»СЋРґРµР№ РїРѕ РґР°С‚Рµ
+    FROM 
+        dbo.CovidVaccinations vac  -- РўР°Р±Р»РёС†Р° СЃ РґР°РЅРЅС‹РјРё Рѕ РІР°РєС†РёРЅР°С†РёРё
+    JOIN 
+        dbo.CovidDeaths dea ON vac.location = dea.location
+        AND vac.date = dea.date  -- РЎРѕРµРґРёРЅРµРЅРёРµ РїРѕ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЋ Рё РґР°С‚Рµ
+    WHERE 
+        dea.continent IS NOT NULL  -- РСЃРєР»СЋС‡РµРЅРёРµ СЃС‚СЂРѕРє, РіРґРµ РєРѕРЅС‚РёРЅРµРЅС‚ РЅРµ СѓРєР°Р·Р°РЅ
+) -- Р—Р°РєСЂС‹РІР°РµРј CTE rolling_percentage
+
+SELECT 
+    continent,
+    location,
+    date,
+    population,
+    new_vaccinations,
+    RollingPeopleVaccinated,
+    ROUND((RollingPeopleVaccinated / population) * 100, 2) AS PercantRollingPeopleVaccinated  -- РџСЂРѕС†РµРЅС‚ РІР°РєС†РёРЅРёСЂРѕРІР°РЅРЅС‹С… РѕС‚ РѕР±С‰РµРіРѕ РЅР°СЃРµР»РµРЅРёСЏ
+FROM 
+    rolling_percentage  -- РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ CTE РґР»СЏ РёР·РІР»РµС‡РµРЅРёСЏ РЅР°РєРѕРїРёС‚РµР»СЊРЅС‹С… РґР°РЅРЅС‹С…
+ORDER BY 
+    2, 3;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ РјРµСЃС‚РѕРїРѕР»РѕР¶РµРЅРёСЋ Рё РґР°С‚Рµ
+
+-- РђРЅР°Р»РёР· Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РјРµР¶РґСѓ СѓСЂРѕРІРЅРµРј РІР°РєС†РёРЅР°С†РёРё Рё СЃРјРµСЂС‚РЅРѕСЃС‚СЊСЋ
+WITH RollVac AS (
+    SELECT 
+        vac.location,
+        DATEPART(YEAR, vac.date) AS Year,
+        DATENAME(MONTH, vac.date) AS Month,         -- РќР°Р·РІР°РЅРёРµ РјРµСЃСЏС†Р°
+        DATEPART(DAY, vac.date) AS Day,             -- Р”РµРЅСЊ РјРµСЃСЏС†Р° (С‡РёСЃР»Рѕ)
+        DATENAME(WEEKDAY, vac.date) AS WeekdayName, -- РќР°Р·РІР°РЅРёРµ РґРЅСЏ РЅРµРґРµР»Рё
+        dea.population,
+        dea.new_deaths,
+        vac.new_vaccinations,
+        -- РљСѓРјСѓР»СЏС‚РёРІРЅРѕРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РІР°РєС†РёРЅРёСЂРѕРІР°РЅРЅС‹С… СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј РѕРєРѕРЅРЅРѕР№ С„СѓРЅРєС†РёРё
+        SUM(CAST(vac.new_vaccinations AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingVaccinations
+    FROM
+        [dbo].[CovidVaccinations] vac
+    JOIN 
+        [dbo].[CovidDeaths] dea ON vac.location = dea.location AND vac.date = dea.date AND dea.continent = vac.continent
+    WHERE 
+       dea.population > 1000000  AND vac.continent IS NOT NULL
+) -- Р—Р°РєСЂС‹РІР°РµРј CTE RollVac
+
+SELECT
+    location,
+    Year,
+    Month,
+    Day,
+    WeekdayName,
+    population,
+    new_deaths,
+    new_vaccinations,
+    RollingVaccinations,
+    -- РџСЂРѕС†РµРЅС‚ РІР°РєС†РёРЅРёСЂРѕРІР°РЅРЅРѕРіРѕ РЅР°СЃРµР»РµРЅРёСЏ
+    ROUND((RollingVaccinations / CAST(population AS DECIMAL(15,2))) * 100, 2) AS VaccinatedPercent,
+    -- РЈСЂРѕРІРµРЅСЊ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РЅР° РјРёР»Р»РёРѕРЅ С‡РµР»РѕРІРµРє
+    ROUND((CAST(new_deaths AS DECIMAL(15,2)) / CAST(population AS DECIMAL(15,2))) * 1000000, 2) AS DeathRatePerMillion
+FROM 
+    RollVac
+ORDER BY
+    location,
+    Year,
+    Month,
+    Day;
+
+
+-- Р”РёРЅР°РјРёРєР° СЃРјРµСЂС‚РЅРѕСЃС‚Рё Рё РІР°РєС†РёРЅР°С†РёРё РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј
+
+-- РћРїСЂРµРґРµР»СЏРµРј РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ РґР»СЏ СЂР°СЃС‡РµС‚Р° СЃРјРµСЂС‚РЅРѕСЃС‚Рё РїРѕ РјРµСЃСЏС†Р°Рј Рё РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј
+WITH MonthlyDeaths AS (
+    SELECT 
+        continent,  -- РЈРєР°Р·С‹РІР°РµРј РєРѕРЅС‚РёРЅРµРЅС‚
+        DATETRUNC(MONTH, date) AS MonthDeaths,  -- РћР±СЂРµР·Р°РµРј РґР°С‚Сѓ РґРѕ РїРµСЂРІРѕРіРѕ С‡РёСЃР»Р° РјРµСЃСЏС†Р°
+        SUM(CAST(new_deaths AS INT)) AS total_deaths  -- РЎСѓРјРјРёСЂСѓРµРј РЅРѕРІС‹Рµ СЃР»СѓС‡Р°Рё СЃРјРµСЂС‚РµР№ Р·Р° РјРµСЃСЏС†
+    FROM 
+        dbo.CovidDeaths
+    WHERE 
+        continent IS NOT NULL  -- РСЃРєР»СЋС‡Р°РµРј Р·Р°РїРёСЃРё Р±РµР· СѓРєР°Р·Р°РЅРёСЏ РєРѕРЅС‚РёРЅРµРЅС‚Р°
+    GROUP BY 
+        continent,  -- Р“СЂСѓРїРїРёСЂСѓРµРј РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ
+        DATETRUNC(MONTH, date)  -- Р РїРѕ РјРµСЃСЏС†Сѓ
+),
+
+-- РћРїСЂРµРґРµР»СЏРµРј РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ РґР»СЏ СЂР°СЃС‡РµС‚Р° РІР°РєС†РёРЅР°С†РёР№ РїРѕ РјРµСЃСЏС†Р°Рј Рё РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј
+MonthlyVaccinations AS (
+    SELECT 
+        continent,  -- РЈРєР°Р·С‹РІР°РµРј РєРѕРЅС‚РёРЅРµРЅС‚
+        DATETRUNC(MONTH, date) AS MonthlyVaccinations,  -- РћР±СЂРµР·Р°РµРј РґР°С‚Сѓ РґРѕ РїРµСЂРІРѕРіРѕ С‡РёСЃР»Р° РјРµСЃСЏС†Р°
+        SUM(CAST(new_vaccinations AS INT)) AS total_vaccinations  -- РЎСѓРјРјРёСЂСѓРµРј РЅРѕРІС‹Рµ СЃР»СѓС‡Р°Рё РІР°РєС†РёРЅР°С†РёРё Р·Р° РјРµСЃСЏС†
+    FROM 
+        dbo.CovidVaccinations
+    WHERE 
+        continent IS NOT NULL  -- РСЃРєР»СЋС‡Р°РµРј Р·Р°РїРёСЃРё Р±РµР· СѓРєР°Р·Р°РЅРёСЏ РєРѕРЅС‚РёРЅРµРЅС‚Р°
+    GROUP BY 
+        continent,  -- Р“СЂСѓРїРїРёСЂСѓРµРј РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ
+        DATETRUNC(MONTH, date)  -- Р РїРѕ РјРµСЃСЏС†Сѓ
+) -- Р—Р°РєСЂС‹РІР°РµРј CTE MonthlyVaccinations
+
+-- РћСЃРЅРѕРІРЅРѕР№ Р·Р°РїСЂРѕСЃ, РѕР±СЉРµРґРёРЅСЏСЋС‰РёР№ РґР°РЅРЅС‹Рµ Рѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё Рё РІР°РєС†РёРЅР°С†РёРё
+SELECT 
+    md.continent,  -- Р’С‹Р±РёСЂР°РµРј РєРѕРЅС‚РёРЅРµРЅС‚
+    COALESCE(md.MonthDeaths, mv.MonthlyVaccinations) AS MonthDeaths,  -- РњРµСЃСЏС† СЃРјРµСЂС‚РЅРѕСЃС‚Рё, РµСЃР»Рё РµСЃС‚СЊ, РёРЅР°С‡Рµ РјРµСЃСЏС† РІР°РєС†РёРЅР°С†РёРё
+    COALESCE(md.total_deaths, 0) AS total_deaths,  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ СЃРјРµСЂС‚РµР№; РµСЃР»Рё РЅРµС‚ РґР°РЅРЅС‹С…, СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј 0
+    COALESCE(mv.MonthlyVaccinations, md.MonthDeaths) AS MonthlyVaccinations,  -- РњРµСЃСЏС† РІР°РєС†РёРЅР°С†РёРё, РµСЃР»Рё РµСЃС‚СЊ, РёРЅР°С‡Рµ РјРµСЃСЏС† СЃРјРµСЂС‚РЅРѕСЃС‚Рё
+    COALESCE(mv.total_vaccinations, 0) AS total_vaccinations  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РІР°РєС†РёРЅР°С†РёР№; РµСЃР»Рё РЅРµС‚ РґР°РЅРЅС‹С…, СѓСЃС‚Р°РЅР°РІР»РёРІР°РµРј 0
+FROM 
+    MonthlyDeaths md  -- РСЃРїРѕР»СЊР·СѓРµРј РІСЂРµРјРµРЅРЅСѓСЋ С‚Р°Р±Р»РёС†Сѓ СЃ РґР°РЅРЅС‹РјРё Рѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё
+FULL OUTER JOIN 
+    MonthlyVaccinations mv ON md.continent = mv.continent AND md.MonthDeaths = mv.MonthlyVaccinations  -- РћР±СЉРµРґРёРЅСЏРµРј РґР°РЅРЅС‹Рµ РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј Рё РјРµСЃСЏС†Р°Рј
+
+-- Р’С‹СЏРІР»РµРЅРёРµ СЃС‚СЂР°РЅ СЃ РЅР°РёР±РѕР»СЊС€РµР№/РЅР°РёРјРµРЅСЊС€РµР№ СЃРєРѕСЂРѕСЃС‚СЊСЋ РІР°РєС†РёРЅР°С†РёРё
+
+WITH VaccinationSpeed AS (
+    SELECT
+        vac.location,  -- Р›РѕРєР°С†РёСЏ, РіРґРµ РїСЂРѕРІРѕРґСЏС‚СЃСЏ РІР°РєС†РёРЅР°С†РёРё
+        vac.date,      -- Р”Р°С‚Р° РІР°РєС†РёРЅР°С†РёРё
+        vac.new_vaccinations,  -- РќРѕРІС‹Рµ РІР°РєС†РёРЅР°С†РёРё Р·Р° РґРµРЅСЊ
+        dea.new_deaths, -- РќРѕРІС‹Рµ СЃРјРµСЂС‚Рё Р·Р° РґРµРЅСЊ
+        dea.population,  -- РћР±С‰Р°СЏ С‡РёСЃР»РµРЅРЅРѕСЃС‚СЊ РЅР°СЃРµР»РµРЅРёСЏ
+        -- РџСЂРµРґС‹РґСѓС‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РІР°РєС†РёРЅР°С†РёР№ РґР»СЏ РІС‹С‡РёСЃР»РµРЅРёСЏ СЂР°Р·РЅРёС†С‹
+        LAG(CAST(vac.total_vaccinations AS INT)) OVER (PARTITION BY vac.location ORDER BY vac.date) AS prev_total_vaccinations,
+        -- Р Р°Р·РЅРёС†Р° РІ РІР°РєС†РёРЅР°С†РёСЏС… Р·Р° РґРµРЅСЊ (СЃРєРѕСЂРѕСЃС‚СЊ РІР°РєС†РёРЅР°С†РёРё)
+        CAST(vac.total_vaccinations AS INT) - 
+        LAG(CAST(vac.total_vaccinations AS INT)) OVER (PARTITION BY vac.location ORDER BY vac.date) AS daily_vaccination_speed
+    FROM 
+        dbo.CovidVaccinations vac  -- РўР°Р±Р»РёС†Р° РІР°РєС†РёРЅР°С†РёР№
+    JOIN 
+        dbo.CovidDeaths dea ON vac.location = dea.location AND vac.date = dea.date  -- РЎРѕРµРґРёРЅРµРЅРёРµ СЃ С‚Р°Р±Р»РёС†РµР№ СЃРјРµСЂС‚РµР№ РїРѕ РґР°С‚Рµ Рё Р»РѕРєР°С†РёРё
+    WHERE 
+        vac.continent IS NOT NULL AND dea.population > 1000000  -- Р¤РёР»СЊС‚СЂР°С†РёСЏ РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ Рё С‡РёСЃР»РµРЅРЅРѕСЃС‚Рё РЅР°СЃРµР»РµРЅРёСЏ
+),
+RankedVaccinationSpeed AS (
+    SELECT
+        location,
+        date,
+        daily_vaccination_speed,  -- РЎРєРѕСЂРѕСЃС‚СЊ РІР°РєС†РёРЅР°С†РёРё Р·Р° РґРµРЅСЊ
+        new_deaths,               -- РќРѕРІС‹Рµ СЃРјРµСЂС‚Рё
+        population,               -- Р§РёСЃР»РµРЅРЅРѕСЃС‚СЊ РЅР°СЃРµР»РµРЅРёСЏ
+        -- РЈСЂРѕРІРµРЅСЊ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РЅР° РјРёР»Р»РёРѕРЅ С‡РµР»РѕРІРµРє
+        ROUND((CAST(new_deaths AS DECIMAL(15, 2)) / population) * 1000000, 2) AS death_rate_per_million,
+        -- РќСѓРјРµСЂР°С†РёСЏ СЃС‚СЂРѕРє РїРѕ СЃРєРѕСЂРѕСЃС‚Рё РІР°РєС†РёРЅР°С†РёРё РґР»СЏ РєР°Р¶РґРѕР№ СЃС‚СЂР°РЅС‹ (РІ РїРѕСЂСЏРґРєРµ СѓР±С‹РІР°РЅРёСЏ)
+        ROW_NUMBER() OVER (PARTITION BY location ORDER BY daily_vaccination_speed DESC) AS rank_high_speed,
+        -- РќСѓРјРµСЂР°С†РёСЏ СЃС‚СЂРѕРє РїРѕ СЃРєРѕСЂРѕСЃС‚Рё РІР°РєС†РёРЅР°С†РёРё РґР»СЏ РєР°Р¶РґРѕР№ СЃС‚СЂР°РЅС‹ (РІ РїРѕСЂСЏРґРєРµ РІРѕР·СЂР°СЃС‚Р°РЅРёСЏ)
+        ROW_NUMBER() OVER (PARTITION BY location ORDER BY daily_vaccination_speed ASC) AS rank_low_speed
+    FROM
+        VaccinationSpeed  -- РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ CTE РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ РґР°РЅРЅС‹С… Рѕ РІР°РєС†РёРЅР°С†РёРё
+    WHERE 
+        daily_vaccination_speed IS NOT NULL  -- РСЃРєР»СЋС‡РµРЅРёРµ СЃС‚СЂРѕРє СЃ NULL Р·РЅР°С‡РµРЅРёСЏРјРё
+) -- Р—Р°РєСЂС‹РІР°РµРј CTE RankedVaccinationSpeed
+
+-- Р’С‹Р±РѕСЂ СЃС‚СЂР°РЅ СЃ СЃР°РјРѕР№ РІС‹СЃРѕРєРѕР№ Рё СЃР°РјРѕР№ РЅРёР·РєРѕР№ СЃРєРѕСЂРѕСЃС‚СЊСЋ РІР°РєС†РёРЅР°С†РёРё
+SELECT 
+    location,
+    date,
+    daily_vaccination_speed,  -- РЎРєРѕСЂРѕСЃС‚СЊ РІР°РєС†РёРЅР°С†РёРё
+    death_rate_per_million,   -- РЈСЂРѕРІРµРЅСЊ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РЅР° РјРёР»Р»РёРѕРЅ С‡РµР»РѕРІРµРє
+    -- РћРїСЂРµРґРµР»РµРЅРёРµ, СЏРІР»СЏРµС‚СЃСЏ Р»Рё СЃРєРѕСЂРѕСЃС‚СЊ РІР°РєС†РёРЅР°С†РёРё РІС‹СЃРѕРєРѕР№ РёР»Рё РЅРёР·РєРѕР№
+    CASE 
+        WHEN rank_high_speed = 1 THEN 'Highly'  -- Р•СЃР»Рё СЃР°РјР°СЏ РІС‹СЃРѕРєР°СЏ СЃРєРѕСЂРѕСЃС‚СЊ
+        ELSE 'Slowly'                           -- РРЅР°С‡Рµ, РЅРёР·РєР°СЏ СЃРєРѕСЂРѕСЃС‚СЊ
+    END AS Highly_Slowly
+FROM 
+    RankedVaccinationSpeed  -- РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ CTE РґР»СЏ РІС‹Р±РѕСЂР° РґР°РЅРЅС‹С…
+WHERE 
+    rank_high_speed = 1 OR rank_low_speed = 1  -- Р’С‹Р±РѕСЂ С‚РѕР»СЊРєРѕ СЃР°РјС‹С… РІС‹СЃРѕРєРёС… Рё СЃР°РјС‹С… РЅРёР·РєРёС… СЃРєРѕСЂРѕСЃС‚РµР№ РІР°РєС†РёРЅР°С†РёРё
+ORDER BY 
+    location, daily_vaccination_speed DESC;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ Р»РѕРєР°С†РёРё Рё СЃРєРѕСЂРѕСЃС‚Рё РІР°РєС†РёРЅР°С†РёРё
+
+-- РћРїСЂРµРґРµР»РµРЅРёРµ РєСЂРёС‚РёС‡РµСЃРєРёС… С‚РѕС‡РµРє РїРѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё
+-- CTE (Common Table Expression) РґР»СЏ РѕР±СЉРµРґРёРЅРµРЅРёСЏ РґР°РЅРЅС‹С… Рѕ РІР°РєС†РёРЅР°С†РёСЏС… Рё СЃРјРµСЂС‚РЅРѕСЃС‚Рё
+WITH DeathsAndVaccinations AS (   
+    SELECT 
+        vac.location,  -- Р›РѕРєР°С†РёСЏ (СЃС‚СЂР°РЅР° РёР»Рё СЂРµРіРёРѕРЅ)
+        vac.date,      -- Р”Р°С‚Р° Р·Р°РїРёСЃРё
+        vac.new_vaccinations,  -- РќРѕРІС‹Рµ РІР°РєС†РёРЅР°С†РёРё РІ РґР°РЅРЅРѕР№ РґР°С‚Рµ
+        dea.new_deaths,        -- РќРѕРІС‹Рµ СЃР»СѓС‡Р°Рё СЃРјРµСЂС‚Рё РІ РґР°РЅРЅРѕР№ РґР°С‚Рµ
+        -- Р Р°СЃС‡С‘С‚ СЃРєРѕР»СЊР·СЏС‰РµР№ СЃСѓРјРјС‹ РЅРѕРІС‹С… СЃРјРµСЂС‚РµР№ СЃ СѓС‡С‘С‚РѕРј Р»РѕРєР°С†РёРё Рё РґР°С‚С‹
+        SUM(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingDeaths,
+        -- Р Р°СЃС‡С‘С‚ СЃРєРѕР»СЊР·СЏС‰РµР№ СЃСѓРјРјС‹ РЅРѕРІС‹С… РІР°РєС†РёРЅР°С†РёР№ СЃ СѓС‡С‘С‚РѕРј Р»РѕРєР°С†РёРё Рё РґР°С‚С‹
+        SUM(CAST(vac.new_vaccinations AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingVaccinations,
+        -- Р Р°СЃС‡С‘С‚ СЃСЂРµРґРЅРµРіРѕ Р·РЅР°С‡РµРЅРёСЏ РЅРѕРІС‹С… СЃРјРµСЂС‚РµР№ СЃ СѓС‡С‘С‚РѕРј Р»РѕРєР°С†РёРё Рё РґР°С‚С‹
+        AVG(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS AvgDeaths,
+        -- РџРѕР»СѓС‡РµРЅРёРµ РєРѕР»РёС‡РµСЃС‚РІР° РЅРѕРІС‹С… СЃРјРµСЂС‚РµР№ Р·Р° РїСЂРµРґС‹РґСѓС‰СѓСЋ РґР°С‚Сѓ СЃ СѓС‡С‘С‚РѕРј Р»РѕРєР°С†РёРё
+        LAG(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS PrevDeaths
+    FROM
+        dbo.CovidVaccinations vac  -- РўР°Р±Р»РёС†Р° СЃ РґР°РЅРЅС‹РјРё Рѕ РІР°РєС†РёРЅР°С†РёСЏС…
+    JOIN 
+        dbo.CovidDeaths dea ON vac.location = dea.location AND vac.date = dea.date  -- РћР±СЉРµРґРёРЅРµРЅРёРµ РїРѕ Р»РѕРєР°С†РёРё Рё РґР°С‚Рµ
+    WHERE
+        vac.continent IS NOT NULL  -- Р¤РёР»СЊС‚СЂР°С†РёСЏ РїРѕ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРј РєРѕРЅС‚РёРЅРµРЅС‚Р°Рј
+),
+
+-- CTE РґР»СЏ Р°РЅР°Р»РёР·Р° РєСЂРёС‚РёС‡РµСЃРєРёС… С‚РѕС‡РµРє РїРѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё
+CriticalDeathsPoints AS (
+    SELECT
+        location,
+        date,
+        new_vaccinations,
+        new_deaths,
+        RollingDeaths,
+        RollingVaccinations,
+        AvgDeaths,
+        PrevDeaths,
+        -- РћРїСЂРµРґРµР»РµРЅРёРµ РєСЂРёС‚РёС‡РµСЃРєРѕР№ С‚РѕС‡РєРё РїРѕ СЃСЂР°РІРЅРµРЅРёСЋ СЃРѕ Р·РЅР°С‡РµРЅРёРµРј РїСЂРµРґС‹РґСѓС‰РµР№ РґР°С‚С‹
+        CASE	
+            WHEN RollingDeaths > PrevDeaths * 1.5 THEN 'Critical Point'  -- Р•СЃР»Рё РЅРѕРІС‹Рµ СЃРјРµСЂС‚Рё РїСЂРµРІС‹С€Р°СЋС‚ 150% РѕС‚ РїСЂРµРґС‹РґСѓС‰РёС…
+            ELSE 'Normal'  -- Р’ РїСЂРѕС‚РёРІРЅРѕРј СЃР»СѓС‡Р°Рµ - РЅРѕСЂРјР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
+        END AS DeathTrend
+    FROM 
+        DeathsAndVaccinations  -- РСЃРїРѕР»СЊР·СѓРµРј СЂРµР·СѓР»СЊС‚Р°С‚С‹ РёР· РїСЂРµРґС‹РґСѓС‰РµРіРѕ CTE
+)  -- Р—Р°РєСЂС‹РІР°РµРј CTE CriticalDeathsPoints
+
+-- РћСЃРЅРѕРІРЅРѕР№ Р·Р°РїСЂРѕСЃ РґР»СЏ РёР·РІР»РµС‡РµРЅРёСЏ Рё СЃРѕСЂС‚РёСЂРѕРІРєРё РґР°РЅРЅС‹С…
+SELECT 
+    *
+FROM 
+    CriticalDeathsPoints  -- РР·РІР»РµС‡РµРЅРёРµ РІСЃРµС… СЃС‚РѕР»Р±С†РѕРІ РёР· Р°РЅР°Р»РёР·Р° РєСЂРёС‚РёС‡РµСЃРєРёС… С‚РѕС‡РµРє
+ORDER BY 
+    DeathTrend ASC;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ С‚РёРїСѓ С‚РµРЅРґРµРЅС†РёРё СЃРјРµСЂС‚РЅРѕСЃС‚Рё (РєСЂРёС‚РёС‡РµСЃРєР°СЏ С‚РѕС‡РєР° РёР»Рё РЅРѕСЂРјР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ)
+
+-- РЎРѕР·РґР°РЅРёРµ РІСЂРµРјРµРЅРЅРѕР№ С‚Р°Р±Р»РёС†С‹ РґР»СЏ Р°РЅР°Р»РёР·Р° РїСЂРѕС†РµРЅС‚РЅРѕРіРѕ СѓРІРµР»РёС‡РµРЅРёСЏ РІР°РєС†РёРЅР°С†РёРё
 DROP TABLE IF EXISTS TEMP_PercantRollingPeopleVaccinated;
 CREATE TABLE TEMP_PercantRollingPeopleVaccinated
 (
@@ -25,348 +377,24 @@ JOIN
 WHERE 
 	dea.continent IS NOT NULL 
 
+-- РЎРѕР·РґР°РЅРёРµ РїСЂРµРґСЃС‚Р°РІР»РµРЅРёСЏ РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РґР°РЅРЅС‹С… РґР»СЏ РїРѕСЃР»РµРґСѓСЋС‰РµР№ РІРёР·СѓР°Р»РёР·Р°С†РёРё
+CREATE VIEW PercantageDeathsCont AS
 SELECT 
-	*,
-	ROUND((RollingPeopleVaccinated / NULLIF(population,0)) * 100,2) AS PercantRollingPeopleVaccinated
-FROM
-	TEMP_PercantRollingPeopleVaccinated;
-
--- Общее количество зараженных и смертности по миру
-SELECT 
-	SUM(new_cases) AS total_new_cases,
-	SUM(CAST(new_deaths AS INT)) AS total_new_deaths,
-	SUM(CAST(new_deaths AS INT)) / SUM(new_cases) * 100 AS PercantageDeaths
-FROM 
-	dbo.CovidDeaths
-WHERE 
-	continent IS NOT NULL;
-
-
--- Анализ новых случаев и смертности от COVID-19 по континентам
-SELECT 
-	continent,  -- Название континента
-	date,       -- Дата записи данных
-	SUM(COALESCE(CAST(new_cases AS INT), 0)) AS total_new_cases,  -- Общее количество новых случаев, с заменой NULL на 0
-	SUM(COALESCE(CAST(new_deaths AS INT), 0)) AS total_new_deaths,  -- Общее количество новых смертей, с заменой NULL на 0
+	continent,  -- РќР°Р·РІР°РЅРёРµ РєРѕРЅС‚РёРЅРµРЅС‚Р°
+	date,       -- Р”Р°С‚Р° Р·Р°РїРёСЃРё РґР°РЅРЅС‹С…
+	SUM(COALESCE(CAST(new_cases AS INT), 0)) AS total_new_cases,  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃР»СѓС‡Р°РµРІ, СЃ Р·Р°РјРµРЅРѕР№ NULL РЅР° 0
+	SUM(COALESCE(CAST(new_deaths AS INT), 0)) AS total_new_deaths,  -- РћР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃРјРµСЂС‚РµР№, СЃ Р·Р°РјРµРЅРѕР№ NULL РЅР° 0
 	CASE 
-		WHEN SUM(COALESCE(CAST(new_cases AS INT), 0)) = 0  -- Проверка, чтобы избежать деления на ноль
-		THEN 0  -- Если общее количество новых случаев равно 0, вернуть 0
-		ELSE ROUND(SUM(COALESCE(CAST(new_deaths AS REAL), 0)) / SUM(COALESCE(CAST(new_cases AS REAL), 0)) * 100, 2)  -- Вычисление процента смертей, округление до 2 знаков
+		WHEN SUM(COALESCE(CAST(new_cases AS INT), 0)) = 0  -- РџСЂРѕРІРµСЂРєР°, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РґРµР»РµРЅРёСЏ РЅР° РЅРѕР»СЊ
+		THEN 0  -- Р•СЃР»Рё РѕР±С‰РµРµ РєРѕР»РёС‡РµСЃС‚РІРѕ РЅРѕРІС‹С… СЃР»СѓС‡Р°РµРІ СЂР°РІРЅРѕ 0, РІРµСЂРЅСѓС‚СЊ 0
+		ELSE ROUND(SUM(COALESCE(CAST(new_deaths AS REAL), 0)) / SUM(COALESCE(CAST(new_cases AS REAL), 0)) * 100, 2)  -- Р’С‹С‡РёСЃР»РµРЅРёРµ РїСЂРѕС†РµРЅС‚Р° СЃРјРµСЂС‚РµР№, РѕРєСЂСѓРіР»РµРЅРёРµ РґРѕ 2 Р·РЅР°РєРѕРІ
 	END AS PercantageDeaths
 FROM 
-	dbo.CovidDeaths  -- Таблица с данными о смертности от COVID
+	dbo.CovidDeaths  -- РўР°Р±Р»РёС†Р° СЃ РґР°РЅРЅС‹РјРё Рѕ СЃРјРµСЂС‚РЅРѕСЃС‚Рё РѕС‚ COVID
 WHERE 
-	continent IS NOT NULL  -- Исключение строк, где континент не указан
+	continent IS NOT NULL  -- РСЃРєР»СЋС‡РµРЅРёРµ СЃС‚СЂРѕРє, РіРґРµ РєРѕРЅС‚РёРЅРµРЅС‚ РЅРµ СѓРєР°Р·Р°РЅ
 GROUP BY 
-	continent,  -- Группировка по континенту
-	date        -- Группировка по дате
-ORDER BY
-	continent;  -- Сортировка по континенту
-
---Показаны континенты с самым высоким показателем процентно смертности населения
-SELECT 
-	continent, 
-	MAX(CAST(total_deaths AS INT)) AS TotalDeathCount
-FROM
-	dbo.CovidDeaths
-WHERE
-	continent IS NOT NULL
-GROUP BY 
-	continent
-ORDER BY
-	TotalDeathCount DESC;
-
--- В каких странах была самая высокая смертность людей
- /*Проанализировать страны с самой высокой смертностью и оценить,какие страны пострадали больше всего
-					по сравнению с их населением в ходе пандемии COVID-19.*/
-
-SELECT 
-    location,
-    MAX(CAST(total_deaths AS INT)) AS HighestDeaths,  
-    MAX(COALESCE(CAST(total_deaths AS FLOAT), 0) / NULLIF(COALESCE(CAST(population AS BIGINT), 0), 0) * 100) AS DeathPercentage 
-FROM 
-    dbo.CovidDeaths
-WHERE 
-	continent IS NOT NULL
-GROUP BY 
-    location
-ORDER BY
-    HighestDeaths DESC;  
-
-
--- Запрос для определения стран с самым высоким уровнем инфекций COVID-19 
-SELECT 
-    location,                             -- Название страны
-    population,                           -- Общее количество населения страны
-    MAX(total_cases) AS MaxTotalInfected,  -- Максимальное количество случаев инфекции COVID-19 в стране
-    (MAX(total_cases) / NULLIF(population, 0)) * 100 AS PercentPopulationInfected  -- Процент населения, инфицированного COVID-19
-FROM 
-    dbo.CovidDeaths
-WHERE 
-    continent IS NOT NULL
-GROUP BY 
-    location,
-    population
-ORDER BY
-    PercentPopulationInfected DESC;  -- Сортировка по проценту инфицированных населения в порядке убывания
-
--- Отобразить общее количество случаев заражений COVID-19 в сравнении с численностью населения
-SELECT 
-	location,
-	date,
-	total_cases,
-	population,
-	(total_cases/population) * 100 AS PopulationPercantage -- Процент населения зараженные COVID-19
-FROM 
-	dbo.CovidDeaths
-WHERE 
-	LOWER(location) LIKE 'kazakh%'
-ORDER BY
-	1,2;
-
--- Запрос выполняет вычисление процента смертности от COVID-19 по местоположениям, начинающимся с "Kazakh", и сортирует данные по локации и дате.
--- Это показывает, что вероятность летального исхода при заражении COVID-19 в нашей стране остается низкой.
-SELECT 
-	location, 
-	date, 
-	total_cases, 
-	total_deaths,
-	(total_deaths/total_cases) * 100 AS DeathPercantage -- Процент смерти
-FROM 
-	dbo.CovidDeaths
-WHERE 
-	LOWER(location) LIKE 'kazakh%'
-ORDER BY
-	1,2;
-
---Анализ накопительной вакцинации от COVID-19 по местоположению и проценту вакцинированных
-WITH rolling_percentage (continent, location, date, population, new_vaccinations, RollingPeopleVaccinated) AS (
-    SELECT
-        dea.continent,  -- Название континента
-        dea.location,   -- Местоположение (страна или регион)
-        dea.date,       -- Дата записи данных
-        dea.population, -- Население страны или региона
-        vac.new_vaccinations,  -- Новые вакцинации за день
-        SUM(CONVERT(REAL, vac.new_vaccinations)) OVER(
-            PARTITION BY dea.location 
-            ORDER BY dea.location, dea.date
-        ) AS RollingPeopleVaccinated  -- Накопительное число вакцинированных людей по дате
-    FROM 
-        dbo.CovidVaccinations vac  -- Таблица с данными о вакцинации
-    JOIN 
-        dbo.CovidDeaths dea ON vac.location = dea.location
-        AND vac.date = dea.date  -- Соединение по местоположению и дате
-    WHERE 
-        dea.continent IS NOT NULL  -- Исключение строк, где континент не указан
-) -- Закрываем CTE rolling_percentage
-
-SELECT 
-    continent,
-    location,
-    date,
-    population,
-    new_vaccinations,
-    RollingPeopleVaccinated,
-    ROUND((RollingPeopleVaccinated / population) * 100, 2) AS PercantRollingPeopleVaccinated  -- Процент вакцинированных от общего населения
-FROM 
-    rolling_percentage  -- Использование CTE для извлечения накопительных данных
-ORDER BY 
-    2, 3;  -- Сортировка по местоположению и дате
-
--- Анализ зависимости между уровнем вакцинации и смертностью
-WITH RollVac AS (
-    SELECT 
-        vac.location,
-        DATEPART(YEAR, vac.date) AS Year,
-        DATENAME(MONTH, vac.date) AS Month,         -- Название месяца
-        DATEPART(DAY, vac.date) AS Day,             -- День месяца (число)
-        DATENAME(WEEKDAY, vac.date) AS WeekdayName, -- Название дня недели
-        dea.population,
-        dea.new_deaths,
-        vac.new_vaccinations,
-        -- Кумулятивное количество вакцинированных с использованием оконной функции
-        SUM(CAST(vac.new_vaccinations AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingVaccinations
-    FROM
-        [dbo].[CovidVaccinations] vac
-    JOIN 
-        [dbo].[CovidDeaths] dea ON vac.location = dea.location AND vac.date = dea.date AND dea.continent = vac.continent
-    WHERE 
-       dea.population > 1000000  AND vac.continent IS NOT NULL
-) -- Закрываем CTE RollVac
-
-SELECT
-    location,
-    Year,
-    Month,
-    Day,
-    WeekdayName,
-    population,
-    new_deaths,
-    new_vaccinations,
-    RollingVaccinations,
-    -- Процент вакцинированного населения
-    ROUND((RollingVaccinations / CAST(population AS DECIMAL(15,2))) * 100, 2) AS VaccinatedPercent,
-    -- Уровень смертности на миллион человек
-    ROUND((CAST(new_deaths AS DECIMAL(15,2)) / CAST(population AS DECIMAL(15,2))) * 1000000, 2) AS DeathRatePerMillion
-FROM 
-    RollVac
-ORDER BY
-    location,
-    Year,
-    Month,
-    Day;
-
-
--- Динамика смертности и вакцинации по континентам
-
--- Определяем временную таблицу для расчета смертности по месяцам и континентам
-WITH MonthlyDeaths AS (
-    SELECT 
-        continent,  -- Указываем континент
-        DATETRUNC(MONTH, date) AS MonthDeaths,  -- Обрезаем дату до первого числа месяца
-        SUM(CAST(new_deaths AS INT)) AS total_deaths  -- Суммируем новые случаи смертей за месяц
-    FROM 
-        dbo.CovidDeaths
-    WHERE 
-        continent IS NOT NULL  -- Исключаем записи без указания континента
-    GROUP BY 
-        continent,  -- Группируем по континенту
-        DATETRUNC(MONTH, date)  -- И по месяцу
-),
-
--- Определяем временную таблицу для расчета вакцинаций по месяцам и континентам
-MonthlyVaccinations AS (
-    SELECT 
-        continent,  -- Указываем континент
-        DATETRUNC(MONTH, date) AS MonthlyVaccinations,  -- Обрезаем дату до первого числа месяца
-        SUM(CAST(new_vaccinations AS INT)) AS total_vaccinations  -- Суммируем новые случаи вакцинации за месяц
-    FROM 
-        dbo.CovidVaccinations
-    WHERE 
-        continent IS NOT NULL  -- Исключаем записи без указания континента
-    GROUP BY 
-        continent,  -- Группируем по континенту
-        DATETRUNC(MONTH, date)  -- И по месяцу
-) -- Закрываем CTE MonthlyVaccinations
-
--- Основной запрос, объединяющий данные о смертности и вакцинации
-SELECT 
-    md.continent,  -- Выбираем континент
-    COALESCE(md.MonthDeaths, mv.MonthlyVaccinations) AS MonthDeaths,  -- Месяц смертности, если есть, иначе месяц вакцинации
-    COALESCE(md.total_deaths, 0) AS total_deaths,  -- Общее количество смертей; если нет данных, устанавливаем 0
-    COALESCE(mv.MonthlyVaccinations, md.MonthDeaths) AS MonthlyVaccinations,  -- Месяц вакцинации, если есть, иначе месяц смертности
-    COALESCE(mv.total_vaccinations, 0) AS total_vaccinations  -- Общее количество вакцинаций; если нет данных, устанавливаем 0
-FROM 
-    MonthlyDeaths md  -- Используем временную таблицу с данными о смертности
-FULL OUTER JOIN 
-    MonthlyVaccinations mv ON md.continent = mv.continent AND md.MonthDeaths = mv.MonthlyVaccinations  -- Объединяем данные по континентам и месяцам
-
--- Выявление стран с наибольшей/наименьшей скоростью вакцинации
-
-WITH VaccinationSpeed AS (
-    SELECT
-        vac.location,  -- Локация, где проводятся вакцинации
-        vac.date,      -- Дата вакцинации
-        vac.new_vaccinations,  -- Новые вакцинации за день
-        dea.new_deaths, -- Новые смерти за день
-        dea.population,  -- Общая численность населения
-        -- Предыдущее количество вакцинаций для вычисления разницы
-        LAG(CAST(vac.total_vaccinations AS INT)) OVER (PARTITION BY vac.location ORDER BY vac.date) AS prev_total_vaccinations,
-        -- Разница в вакцинациях за день (скорость вакцинации)
-        CAST(vac.total_vaccinations AS INT) - 
-        LAG(CAST(vac.total_vaccinations AS INT)) OVER (PARTITION BY vac.location ORDER BY vac.date) AS daily_vaccination_speed
-    FROM 
-        dbo.CovidVaccinations vac  -- Таблица вакцинаций
-    JOIN 
-        dbo.CovidDeaths dea ON vac.location = dea.location AND vac.date = dea.date  -- Соединение с таблицей смертей по дате и локации
-    WHERE 
-        vac.continent IS NOT NULL AND dea.population > 1000000  -- Фильтрация по континенту и численности населения
-),
-RankedVaccinationSpeed AS (
-    SELECT
-        location,
-        date,
-        daily_vaccination_speed,  -- Скорость вакцинации за день
-        new_deaths,               -- Новые смерти
-        population,               -- Численность населения
-        -- Уровень смертности на миллион человек
-        ROUND((CAST(new_deaths AS DECIMAL(15, 2)) / population) * 1000000, 2) AS death_rate_per_million,
-        -- Нумерация строк по скорости вакцинации для каждой страны (в порядке убывания)
-        ROW_NUMBER() OVER (PARTITION BY location ORDER BY daily_vaccination_speed DESC) AS rank_high_speed,
-        -- Нумерация строк по скорости вакцинации для каждой страны (в порядке возрастания)
-        ROW_NUMBER() OVER (PARTITION BY location ORDER BY daily_vaccination_speed ASC) AS rank_low_speed
-    FROM
-        VaccinationSpeed  -- Использование CTE для получения данных о вакцинации
-    WHERE 
-        daily_vaccination_speed IS NOT NULL  -- Исключение строк с NULL значениями
-) -- Закрываем CTE RankedVaccinationSpeed
-
--- Выбор стран с самой высокой и самой низкой скоростью вакцинации
-SELECT 
-    location,
-    date,
-    daily_vaccination_speed,  -- Скорость вакцинации
-    death_rate_per_million,   -- Уровень смертности на миллион человек
-    -- Определение, является ли скорость вакцинации высокой или низкой
-    CASE 
-        WHEN rank_high_speed = 1 THEN 'Highly'  -- Если самая высокая скорость
-        ELSE 'Slowly'                           -- Иначе, низкая скорость
-    END AS Highly_Slowly
-FROM 
-    RankedVaccinationSpeed  -- Использование CTE для выбора данных
-WHERE 
-    rank_high_speed = 1 OR rank_low_speed = 1  -- Выбор только самых высоких и самых низких скоростей вакцинации
-ORDER BY 
-    location, daily_vaccination_speed DESC;  -- Сортировка по локации и скорости вакцинации
-
--- Определение критических точек по смертности
--- CTE (Common Table Expression) для объединения данных о вакцинациях и смертности
-WITH DeathsAndVaccinations AS (   
-    SELECT 
-        vac.location,  -- Локация (страна или регион)
-        vac.date,      -- Дата записи
-        vac.new_vaccinations,  -- Новые вакцинации в данной дате
-        dea.new_deaths,        -- Новые случаи смерти в данной дате
-        -- Расчёт скользящей суммы новых смертей с учётом локации и даты
-        SUM(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingDeaths,
-        -- Расчёт скользящей суммы новых вакцинаций с учётом локации и даты
-        SUM(CAST(vac.new_vaccinations AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS RollingVaccinations,
-        -- Расчёт среднего значения новых смертей с учётом локации и даты
-        AVG(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS AvgDeaths,
-        -- Получение количества новых смертей за предыдущую дату с учётом локации
-        LAG(CAST(dea.new_deaths AS INT)) OVER(PARTITION BY vac.location ORDER BY vac.date) AS PrevDeaths
-    FROM
-        dbo.CovidVaccinations vac  -- Таблица с данными о вакцинациях
-    JOIN 
-        dbo.CovidDeaths dea ON vac.location = dea.location AND vac.date = dea.date  -- Объединение по локации и дате
-    WHERE
-        vac.continent IS NOT NULL  -- Фильтрация по существующим континентам
-),
-
--- CTE для анализа критических точек по смертности
-CriticalDeathsPoints AS (
-    SELECT
-        location,
-        date,
-        new_vaccinations,
-        new_deaths,
-        RollingDeaths,
-        RollingVaccinations,
-        AvgDeaths,
-        PrevDeaths,
-        -- Определение критической точки по сравнению со значением предыдущей даты
-        CASE	
-            WHEN RollingDeaths > PrevDeaths * 1.5 THEN 'Critical Point'  -- Если новые смерти превышают 150% от предыдущих
-            ELSE 'Normal'  -- В противном случае - нормальное состояние
-        END AS DeathTrend
-    FROM 
-        DeathsAndVaccinations  -- Используем результаты из предыдущего CTE
-)  -- Закрываем CTE CriticalDeathsPoints
-
--- Основной запрос для извлечения и сортировки данных
-SELECT 
-    *
-FROM 
-    CriticalDeathsPoints  -- Извлечение всех столбцов из анализа критических точек
-ORDER BY 
-    DeathTrend ASC;  -- Сортировка по типу тенденции смертности (критическая точка или нормальное состояние)
+	continent,  -- Р“СЂСѓРїРїРёСЂРѕРІРєР° РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ
+	date        -- Р“СЂСѓРїРїРёСЂРѕРІРєР° РїРѕ РґР°С‚Рµ
+--ORDER BY
+--	continent;  -- РЎРѕСЂС‚РёСЂРѕРІРєР° РїРѕ РєРѕРЅС‚РёРЅРµРЅС‚Сѓ 
