@@ -4,12 +4,6 @@ From dbo.CovidDeaths
 Where continent is not null 
 order by 3,4;
 
-SELECT 
-	*,
-	ROUND((RollingPeopleVaccinated / NULLIF(population,0)) * 100,2) AS PercantRollingPeopleVaccinated
-FROM
-	TEMP_PercantRollingPeopleVaccinated;
-
 -- Общее количество зараженных и смертности по миру
 SELECT 
 	SUM(new_cases) AS total_new_cases,
@@ -19,7 +13,6 @@ FROM
 	dbo.CovidDeaths
 WHERE 
 	continent IS NOT NULL;
-
 
 -- Анализ новых случаев и смертности от COVID-19 по континентам
 SELECT 
@@ -138,7 +131,6 @@ WITH rolling_percentage (continent, location, date, population, new_vaccinations
     WHERE 
         dea.continent IS NOT NULL  -- Исключение строк, где континент не указан
 ) -- Закрываем CTE rolling_percentage
-
 SELECT 
     continent,
     location,
@@ -172,7 +164,6 @@ WITH RollVac AS (
     WHERE 
        dea.population > 1000000  AND vac.continent IS NOT NULL
 ) -- Закрываем CTE RollVac
-
 SELECT
     location,
     Year,
@@ -195,9 +186,7 @@ ORDER BY
     Month,
     Day;
 
-
 -- Динамика смертности и вакцинации по континентам
-
 -- Определяем временную таблицу для расчета смертности по месяцам и континентам
 WITH MonthlyDeaths AS (
     SELECT 
@@ -375,8 +364,17 @@ JOIN
 	dbo.CovidDeaths dea ON vac.location = dea.location
 	AND vac.date = dea.date
 WHERE 
-	dea.continent IS NOT NULL 
-
+	dea.continent IS NOT NULL ;
+-- Расчет Процента Вакцинированных людей
+SELECT 
+    *,  -- Выбираем все столбцы из таблицы TEMP_PercantRollingPeopleVaccinated
+    ROUND((RollingPeopleVaccinated / NULLIF(population,0)) * 100, 2) AS PercantRollingPeopleVaccinated 
+    -- Рассчитываем процент привитых людей:
+    -- делим RollingPeopleVaccinated на population, затем умножаем на 100, чтобы получить процент,
+    -- и округляем до двух знаков после запятой.
+    -- NULLIF(population,0) предотвращает деление на ноль, возвращая NULL, если population равно 0.
+FROM
+    TEMP_PercantRollingPeopleVaccinated;
 -- Создание представления для хранения данных для последующей визуализации
 CREATE VIEW PercantageDeathsCont AS
 SELECT 
